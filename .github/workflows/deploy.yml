@@ -3,52 +3,39 @@ name: Terraform CI/CD
 on:
   push:
     branches:
-      - develop  # Runs on push to the 'dev' branch
-      - main  # Runs on push to the 'prod' branch
-
-  pull_request:
-    branches:
-      - develop  # Runs when a PR targets 'dev'
-      - main  # Runs when a PR targets 'prod'
+      - dev
+      - prod
 
 jobs:
   terraform:
+    name: Terraform Pipeline
     runs-on: ubuntu-latest
 
+    env:
+      GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Set up Terraform
-      uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-    - name: Terraform Init
-      run: |
-        if [[ $GITHUB_REF == 'refs/heads/develop' ]]; then
-          terraform init -backend-config=env/dev/backend.tf
-        elif [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-          terraform init -backend-config=env/prod/backend.tf
-        fi
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      - name: Initialize Terraform
+        run: terraform init
+        working-directory: env/${{ github.ref_name }}
 
-    - name: Terraform Plan
-      run: |
-        if [[ $GITHUB_REF == 'refs/heads/dev' ]]; then
-          terraform plan -var-file=env/dev/terraform.tfvars
-        elif [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-          terraform plan -var-file=env/prod/terraform.tfvars
-        fi
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      - name: Terraform Plan
+        run: terraform plan
+        working-directory: env/${{ github.ref_name }}
 
-    - name: Terraform Apply
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main')
-      run: |
-        if [[ $GITHUB_REF == 'refs/heads/develop' ]]; then
-          terraform apply -auto-approve -var-file=env/dev/terraform.tfvars
-        elif [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-          terraform apply -auto-approve -var-file=env/prod/terraform.tfvars
-        fi
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+      - name: Terraform Apply (Dev Only)
+        if: github.ref_name == 'dev'
+        run: terraform apply -auto-approve
+        working-directory: env/dev
+
+      - name: Terraform Apply (Prod with Approval)
+        if: github.ref_name == 'prod'
+        uses: hmarr/auto-approve-action@v2 # Optional manual approval
+      - run: terraform apply -auto-approve
+        working-directory: env/prod
