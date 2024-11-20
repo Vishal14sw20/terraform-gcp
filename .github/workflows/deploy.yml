@@ -36,6 +36,5 @@ jobs:
 
       - name: Terraform Apply (Prod with Approval)
         if: github.ref_name == 'prod'
-        uses: hmarr/auto-approve-action@v2 # Optional manual approval
       - run: terraform apply -auto-approve
         working-directory: env/prod
