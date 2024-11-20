@@ -11,3 +11,10 @@ resource "google_storage_bucket" "my_bucket" {
     enabled = true
   }
 }
+
+module "storage_bucket" {
+  source      = "../../modules/storage_bucket"
+  bucket_name = "testing-cicdanu-prod2"
+  location    = "EU"
+  storage_class = "STANDARD"
+}
