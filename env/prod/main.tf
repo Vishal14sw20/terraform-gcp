@@ -12,7 +12,6 @@ resource "google_storage_bucket" "my_bucket" {
   }
 }
 
-
 module "storage_bucket" {
   source      = "../../modules/storage_bucket"
   bucket_name = "testing-cicdanu-prod2"
